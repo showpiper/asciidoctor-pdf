@@ -2325,12 +2325,13 @@ class Converter < ::Prawn::Document
           font_style dot_leader_font_style
         end
         {
+          font_size: @theme.toc_dot_leader_font_size || @font_size,
           font_color: @theme.toc_dot_leader_font_color || @font_color,
           font_style: dot_leader_font_style,
           levels: ((dot_leader_l = @theme.toc_dot_leader_levels) == 'none' ? ::Set.new :
               (dot_leader_l && dot_leader_l != 'all' ? dot_leader_l.to_s.split.map(&:to_i).to_set : (0..num_levels).to_set)),
           text: (dot_leader_text = @theme.toc_dot_leader_content || DotLeaderTextDefault),
-          width: dot_leader_text.empty? ? 0 : (rendered_width_of_string dot_leader_text),
+          width: dot_leader_text.empty? ? 0 : (rendered_width_of_string dot_leader_text) * 0.7,
           # TODO spacer gives a little bit of room between dots and page number
           spacer: { text: NoBreakSpace, size: (spacer_font_size = @font_size * 0.25) },
           spacer_width: (rendered_width_of_char NoBreakSpace, size: spacer_font_size)
@@ -2351,6 +2352,7 @@ class Converter < ::Prawn::Document
     toc_font_info = theme_font :toc do
       { font: font, size: @font_size }
     end
+
     sections.each do |sect|
       theme_font :toc, level: (sect.level + 1) do
         sect_title = (transform = @text_transform) && transform != 'none' ?
@@ -2369,7 +2371,8 @@ class Converter < ::Prawn::Document
             anchor: (sect_anchor = sect.attr 'pdf-anchor'),
             color: @font_color,
             styles: ((@theme[%(toc_h#{sect.level + 1}_text_decoration)] || @theme.toc_text_decoration) == 'underline' ?
-                (font_styles << :underline) : font_styles)
+                (font_styles << :underline) : font_styles),
+            size: @font_size
           }
           (sect_title_fragments = text_formatter.format sect_title).each do |fragment|
             fragment.update sect_title_format_override do |key, old_val, new_val|
@@ -2389,7 +2392,7 @@ class Converter < ::Prawn::Document
             sect_title_width = width_of sect_title, inline_format: true
             save_font do
               # NOTE the same font is used for dot leaders throughout toc
-              set_font toc_font_info[:font], toc_font_info[:size]
+              set_font toc_font_info[:font], dot_leader[:font_size]
               font_style dot_leader[:font_style]
               num_dots = ((bounds.width - sect_title_width - dot_leader[:spacer_width] - pgnum_label_width) / dot_leader[:width]).floor
               # FIXME dots don't line up in columns if width of page numbers differ
